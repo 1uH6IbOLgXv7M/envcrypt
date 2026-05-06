@@ -69,6 +69,13 @@ func TestLoadPublicKey_MissingFile(t *testing.T) {
 	}
 }
 
+func TestLoadPrivateKey_MissingFile(t *testing.T) {
+	_, err := LoadPrivateKey("/nonexistent/path/key")
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+}
+
 func TestLoadKey_EmptyFile(t *testing.T) {
 	f, err := os.CreateTemp(t.TempDir(), "key")
 	if err != nil {
