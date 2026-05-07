@@ -91,3 +91,29 @@ func TestLoadVault_Corrupt(t *testing.T) {
 		t.Fatal("expected error for corrupt vault")
 	}
 }
+
+func TestSaveAndLoadVault_CiphertextRoundtrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "roundtrip.vault.json")
+
+	original := []byte("super-secret-ciphertext")
+	v := &Vault{}
+	v.AddEntry(original)
+
+	if err := SaveVault(path, v); err != nil {
+		t.Fatalf("SaveVault: %v", err)
+	}
+
+	loaded, err := LoadVault(path)
+	if err != nil {
+		t.Fatalf("LoadVault: %v", err)
+	}
+
+	entry, err := loaded.EntryByVersion(1)
+	if err != nil {
+		t.Fatalf("EntryByVersion: %v", err)
+	}
+	if string(entry.Ciphertext) != string(original) {
+		t.Errorf("ciphertext mismatch: got %q, want %q", entry.Ciphertext, original)
+	}
+}
