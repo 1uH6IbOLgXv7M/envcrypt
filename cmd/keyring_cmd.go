@@ -28,6 +28,10 @@ func runKeyRingAdd(args []string) error {
 		return fmt.Errorf("loading keyring: %w", err)
 	}
 
+	if kr.HasKey(name) {
+		return fmt.Errorf("key '%s' already exists in keyring; remove it first", name)
+	}
+
 	kr.AddKey(name, pubKey)
 
 	if err := crypto.SaveKeyRing(defaultKeyRingPath, kr); err != nil {
