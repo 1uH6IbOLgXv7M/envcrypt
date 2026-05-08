@@ -51,6 +51,13 @@ func TestDiffEnvFiles_Unchanged(t *testing.T) {
 	}
 }
 
+func TestDiffEnvFiles_Empty(t *testing.T) {
+	d := DiffEnvFiles(EnvFile{}, EnvFile{})
+	if len(d.Added)+len(d.Removed)+len(d.Changed)+len(d.Unchanged) != 0 {
+		t.Error("expected empty diff for two empty files")
+	}
+}
+
 func TestFormatDiff_ContainsSymbols(t *testing.T) {
 	d := DiffResult{
 		Added:     map[string]string{"NEW": "val"},
@@ -67,5 +74,18 @@ func TestFormatDiff_ContainsSymbols(t *testing.T) {
 	}
 	if !strings.Contains(out, "~ X") {
 		t.Error("expected changed line")
+	}
+}
+
+func TestFormatDiff_Empty(t *testing.T) {
+	d := DiffResult{
+		Added:     map[string]string{},
+		Removed:   map[string]string{},
+		Changed:   map[string][2]string{},
+		Unchanged: map[string]string{},
+	}
+	out := FormatDiff(d)
+	if strings.ContainsAny(out, "+-~") {
+		t.Errorf("expected no diff symbols for empty diff, got: %q", out)
 	}
 }
