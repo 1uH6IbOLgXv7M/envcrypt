@@ -10,6 +10,11 @@ type DiffResult struct {
 	Unchanged map[string]string
 }
 
+// HasChanges returns true if there are any added, removed, or changed keys.
+func (d DiffResult) HasChanges() bool {
+	return len(d.Added) > 0 || len(d.Removed) > 0 || len(d.Changed) > 0
+}
+
 // DiffEnvFiles compares two EnvFile maps and returns a DiffResult.
 func DiffEnvFiles(oldEnv, newEnv EnvFile) DiffResult {
 	result := DiffResult{
