@@ -4,24 +4,29 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 )
 
-// VaultEntry represents a single encrypted .env snapshot.
+// VaultEntry holds one encrypted version of an env file.
 type VaultEntry struct {
-	Version   int    `json:"version"`
-	Timestamp string `json:"timestamp"`
-	Ciphertext []byte `json:"ciphertext"`
+	Version   int       `json:"version"`
+	Ciphertext []byte   `json:"ciphertext"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
-// Vault holds a versioned list of encrypted env snapshots.
+// Vault is the on-disk encrypted store.
 type Vault struct {
 	Entries []VaultEntry `json:"entries"`
 }
 
-// LoadVault reads a vault from disk, or returns an empty one if not found.
-func LoadVault(path string) (*Vault, error) {
-	data, err := os.ReadFile(path)
+func vaultPath(dir string) string {
+	return filepath.Join(dir, ".envcrypt_vault.json")
+}
+
+// LoadVault reads the vault from disk, returning an empty vault if missing.
+func LoadVault(dir string) (*Vault, error) {
+	data, err := os.ReadFile(vaultPath(dir))
 	if os.IsNotExist(err) {
 		return &Vault{}, nil
 	}
@@ -35,47 +40,42 @@ func LoadVault(path string) (*Vault, error) {
 	return &v, nil
 }
 
-// SaveVault writes the vault to disk as JSON.
-func SaveVault(path string, v *Vault) error {
+// SaveVault writes the vault to disk.
+func SaveVault(dir string, v *Vault) error {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal vault: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("write vault: %w", err)
-	}
-	return nil
+	return os.WriteFile(vaultPath(dir), data, 0644)
 }
 
-// AddEntry appends a new encrypted snapshot to the vault.
+// AddEntry appends a new encrypted entry, auto-incrementing the version.
 func (v *Vault) AddEntry(ciphertext []byte) VaultEntry {
-	nextVersion := 1
+	next := 1
 	if len(v.Entries) > 0 {
-		nextVersion = v.Entries[len(v.Entries)-1].Version + 1
+		next = v.Entries[len(v.Entries)-1].Version + 1
 	}
-	entry := VaultEntry{
-		Version:    nextVersion,
-		Timestamp:  time.Now().UTC().Format(time.RFC3339),
-		Ciphertext: ciphertext,
-	}
+	entry := VaultEntry{Version: next, Ciphertext: ciphertext, CreatedAt: time.Now()}
 	v.Entries = append(v.Entries, entry)
 	return entry
 }
 
-// LatestEntry returns the most recent vault entry, or an error if empty.
-func (v *Vault) LatestEntry() (VaultEntry, error) {
+// LatestEntry returns the most recently added entry.
+func (v *Vault) LatestEntry() (*VaultEntry, error) {
 	if len(v.Entries) == 0 {
-		return VaultEntry{}, fmt.Errorf("vault is empty")
+		return nil, fmt.Errorf("vault is empty")
 	}
-	return v.Entries[len(v.Entries)-1], nil
+	e := v.Entries[len(v.Entries)-1]
+	return &e, nil
 }
 
-// EntryByVersion finds a vault entry by version number.
-func (v *Vault) EntryByVersion(version int) (VaultEntry, error) {
+// EntryByVersion returns the entry matching the given version number.
+func (v *Vault) EntryByVersion(version int) (*VaultEntry, error) {
 	for _, e := range v.Entries {
 		if e.Version == version {
-			return e, nil
+			copy := e
+			return &copy, nil
 		}
 	}
-	return VaultEntry{}, fmt.Errorf("version %d not found in vault", version)
+	return nil, fmt.Errorf("version %d not found", version)
 }
