@@ -88,3 +88,21 @@ func TestLoadKey_EmptyFile(t *testing.T) {
 		t.Error("expected error for empty key file")
 	}
 }
+
+func TestGenerateKeyPair_UniqueKeys(t *testing.T) {
+	kp1, err := GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair() error = %v", err)
+	}
+	kp2, err := GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair() error = %v", err)
+	}
+
+	if kp1.PublicKey == kp2.PublicKey {
+		t.Error("GenerateKeyPair() produced duplicate public keys")
+	}
+	if kp1.PrivateKey == kp2.PrivateKey {
+		t.Error("GenerateKeyPair() produced duplicate private keys")
+	}
+}
